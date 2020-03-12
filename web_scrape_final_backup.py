@@ -476,56 +476,17 @@ def preprocess_data(doc_set):
     return texts
 
 def negative_words():
-    punctuations = '!()-[]{};:"\,<>./?@#$%^&*_~'
-    tokenizer = RegexpTokenizer(r'\w+')
-    en_stop = set(stopwords.words('english'))
-    en_punctuation = set(string.punctuation)
-    p_stemmer = PorterStemmer()
-    texts = []
     negative_word_list = []
     try:
-        with open("negative_words.txt", "r", encoding='utf8', errors='ignore') as fin:
-            for line in fin.readlines():
-                line = line.replace("\n", " ")
-                negative_word_list.append(line)
-    except Exception as e:
-        print(e)
-    for i in negative_word_list:
-        # clean and tokenize document string
-        raw = i.lower()
-        for x in raw:
-            if x in punctuations:
-                raw = raw.replace(x,"")
-        tokens = tokenizer.tokenize(raw)
-        # remove stop words from tokens
-        stopped_tokens = [i for i in tokens if i not in en_stop]
-        # stem tokens
-        stemmed_tokens = [p_stemmer.stem(i) for i in stopped_tokens]
-        # add tokens to list
-        texts.append(stemmed_tokens)
-    for text in texts:
-        for text_indiv in text:
-            print(text_indiv + "TEXT_INDIVIDUAL")
-    return texts
+        with open("negative_words.txt") as f:
+            for line in fin.readLines():
+                word = text.strip()
+                negative_word_list.append(word)
+    for word in negative_word_list:
+        print(word)
 
-def negative_word_list_compare(negative_word_list, doc_clean):
-    doc_clean_neg = []
-    print("does it work")
-    for i in doc_clean:
-        print(i)
-        for x in i:
-            print(x)
-            for neg_array in negative_word_list:
-                for neg_word in neg_array:
-                    if x == neg_word:
-                        doc_clean_neg.append(x)
-    return doc_clean_neg
-
-def negative_word_common(doc_clean_neg):
-    Common = Counter(doc_clean_neg).most_common(30)
-    df = pd.DataFrame(Common, columns = ["Most common negative words", "Number of Occurences of Words"])
-    df.to_csv("C:\\Users\\asha1\\Webscrape\\negativewords.csv", index=False)
-
+def negative_word_compare(doc_clean):
+    return 0
 
 # Creates matrix of how often words occur and dictionary of all the words that exist
 def prepare_corpus(doc_clean):
@@ -1031,7 +992,7 @@ def web_scrape_glassdoor():
 
     res.to_csv('C:\\Users\\asha1\\WebScrape\\glassdoor'  + '.csv', index=False, encoding='utf-8')
 # Addding a comment for testing purposes
-# Performs latent semantic analysis for scraped pages for indeed website
+# Performs latent semantic analysis for scraped pages on indeed
 def LSA_indeed():
     print("hi")
     number_of_topics = 4
@@ -1060,7 +1021,6 @@ def LSA_indeed():
     LDA_model_indeed(prep_dict, prep_matrix, clean_text)
 
 # Performs latent semantic analysis for scraped pages on glassdoor
-#  Test
 def LSA_glassdoor():
     number_of_topics = 5
     words = 10
