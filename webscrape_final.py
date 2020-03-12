@@ -23,6 +23,7 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 import numpy as np
+import openpyxl
 import os.path
 import os
 import pandas as pd
@@ -94,7 +95,7 @@ parser.add_argument('--headless', action='store_true',
 parser.add_argument('--username', help='Email address used to sign in to GD.')
 parser.add_argument('-p', '--password', help='Password to sign in to GD.')
 parser.add_argument('-c', '--credentials', help='Credentials file')
-parser.add_argument('-l', '--limit', default=152,
+parser.add_argument('-l', '--limit', default=15,
                         action='store', type=int, help='Max reviews to scrape')
 parser.add_argument('--start_from_url', action='store_true',
                         help='Start scraping from the passed URL.')
@@ -327,7 +328,6 @@ def most_common_glassdoor_text(texts):
     df.to_csv('C:\\Users\\asha1\\WebScrape\\glassdoorcommonwords'  +  '.csv')
 
 
-
 # Outputs the most common words from indeed scraping
 # NOt used anymore because it takes too long and doesn't exclude punctuation
 def most_common_indeed():
@@ -527,19 +527,25 @@ def word_list_compare(word_list, doc_clean):
                         doc_clean_emotion.append(x)
     return doc_clean_emotion
 
-def word_common(doc_clean_emotion, save_file_as):
-    Common = Counter(doc_clean_emotion).most_common(30)
-    df = pd.DataFrame(Common, columns = ["Most common words", "Number of Occurences of Words"])
-    df.to_csv("C:\\Users\\asha1\\WebScrape\\" + save_file_as, index=False)
+def word_common(doc_clean_positive, doc_clean_negative, save_file_as, mode_type, website):
+    Common_positive = Counter(doc_clean_positive).most_common(30)
+    Common_negative = Counter(doc_clean_negative).most_common(30)
+    df_pos = pd.DataFrame(Common_positive, columns = ["Word", "Count #"])
+    df_neg = pd.DataFrame(Common_negative, columns = ["Word", "Count #"])
+    # df.to_csv("C:\\Users\\asha1\\WebScrape\\" + save_file_as, index=False)
+    with pd.ExcelWriter(save_file_as, engine="openpyxl", mode=str(mode_type)) as writer:
+        df_pos.to_excel(writer, sheet_name="Positive" + str(website))
+        df_neg.to_excel(writer, sheet_name="Negative" + str(website))
+
 
 # Creates a csv file with all the emotional words(happy or sad) in it
-def emotional_words(filepath_emotion,  doc_clean, save_file_as):
+def emotional_words(filepath_emotion, doc_clean):
     #Obtains all the words from the emotinal txt file
     word_txt = words(filepath_emotion)
     # Compares the words obtained through webscraping and the emotiona txt file
     common_list = word_list_compare(word_txt, doc_clean)
     # puts the most common words into a dataframe that's exported to a csv file
-    word_common(common_list, save_file_as)
+    return common_list
 
 # Creates matrix of how often words occur and dictionary of all the words that exist
 def prepare_corpus(doc_clean):
@@ -1061,8 +1067,7 @@ def LSA_indeed():
     most_common_wordcloud_indeed(clean_text)
     LSA_indeed_model_to_csv(new_model.print_topics(num_topics=number_of_topics, num_words=words))
     LDA_model_indeed(prep_dict, prep_matrix, clean_text)
-    emotional_words("negative_words.txt", clean_text, "negativewordsindeed.csv")
-    emotional_words("positive_words.txt", clean_text, "positivewordsindeed.csv")
+    return clean_text
 
 # Performs latent semantic analysis for scraped pages on glassdoor
 def LSA_glassdoor():
@@ -1071,36 +1076,43 @@ def LSA_glassdoor():
     csv_convert('C:\\Users\\asha1\\WebScrape\\', 'glassdoor' + '.csv')
     text_info, title_info = load_data_glassdoor('C:\\Users\\asha1\\WebScrape', 'glassdoortext' + '.csv')
     clean_text = preprocess_data(text_info)
-    prep_dict, prep_matrix = prepare_corpus(clean_text)
-    new_model = create_gensim_lsa_model(clean_text, 5, 10)
-    new_list, num_topics = compute_coherence_values(prep_dict, prep_matrix, clean_text, 5, 10, 1)
-    most_common_wordcloud_glassdoor(clean_text)
-    LSA_glassdoor_model_to_csv(new_model.print_topics(num_topics=number_of_topics, num_words=words))
-    common = most_common_glassdoor_text(clean_text)
-    LDA_model_glassdoor(prep_dict, prep_matrix, clean_text)
-    emotional_words("negative_words.txt", clean_text, "negativewordsglassdoor.csv")
-    emotional_words("positive_words.txt", clean_text, "positivewordsglassdoor.csv")
-
+    # prep_dict, prep_matrix = prepare_corpus(clean_text)
+    # new_model = create_gensim_lsa_model(clean_text, 5, 10)
+    # new_list, num_topics = compute_coherence_values(prep_dict, prep_matrix, clean_text, 5, 10, 1)
+    # most_common_wordcloud_glassdoor(clean_text)
+    # LSA_glassdoor_model_to_csv(new_model.print_topics(num_topics=number_of_topics, num_words=words))
+    # common = most_common_glassdoor_text(clean_text)
+    # LDA_model_glassdoor(prep_dict, prep_matrix, clean_text)
+    return clean_text
     # plot_graph(clean_text, 2, 10, 1)
 
 
 # Runs the program
 def run_the_program():
     # Brings old files to old directory and allows space for new files to exist in current directoryis
-    dirmove = make_directory()
+    # dirmove = make_directory()
     # # Webscrapes indeed and glassdoor respectively and saves dataframe to csv file
-    web_scrape_indeed()
-    time.sleep(3)
-    web_scrape_glassdoor()
+    # web_scrape_indeed()
+    # time.sleep(3)
+    # web_scrape_glassdoor()
     #
     # # Runs the latent semantic analysis
-    LSA_indeed()
-    LSA_glassdoor()
+    clean_text_indeed = LSA_indeed()
+    clean_text_glassdoor = LSA_glassdoor()
+
+    clean_text_indeed_positive = emotional_words("positive_words.txt", clean_text_indeed)
+    clean_text_indeed_negative = emotional_words("negative_words.txt", clean_text_indeed)
+    word_common(clean_text_indeed_positive, clean_text_indeed_negative, "C:\\Users\\asha1\\WebScrape\\emotionword.xlsx", "w", "indeed")
+
+    clean_text_glassdoor_positive = emotional_words("positive_words.txt", clean_text_glassdoor)
+    clean_text_glassdoor_negative = emotional_words("negative_words.txt", clean_text_glassdoor)
+    word_common(clean_text_glassdoor_positive, clean_text_glassdoor_negative, "C:\\Users\\asha1\\WebScrape\\emotionword.xlsx","a", "glassdoor")
+
 
     # # Emails the files to Recruitment
-    email_attachments()
+    # email_attachments()
     # Moves the files to the storage directory
-    old_file_move(dirmove)
+    # old_file_move(dirmove)
 
 # #Starts the program
 if __name__ == '__main__':
