@@ -170,17 +170,23 @@ def make_directory():
     # # dir = os.path.join("C:\\Users\\asha1\\WebScrape\\" + str(myy_dictionary[str(x.month)]) + " " + str(x.day) + " " + str(x.year))
     # # if not os.path.exists(dir):
     # #     os.mkdir(dir)
-    dir_move = os.path.join("C:\\Users\\asha1\\Previous\\" + str(myy_dictionary[str(x.month)]) + " " + str(x.day) + " " + str(x.year))
+    # Creates a directory if needed for a new month
+    dir_month_move = os.path.join("C:\\Users\\asha1\\Previous\\" + str(myy_dictionary[str(x.month)]) + " " + str(x.year))
+    if not os.path.exists(dir_month_move):
+        os.mkdir(dir_month_move)
+
+    #Creates a new directory if needed for a new day
+    dir_move = os.path.join(dir_month_move + "\\" + str(myy_dictionary[str(x.month)]) + " " + str(x.day) + " " + str(x.year))
     if not os.path.exists(dir_move):
         os.mkdir(dir_move)
+    return dir_move
 
 # Moves old files from the same day to "previous" location
-def old_file_move():
+def old_file_move(dst):
     files = []
     filespath = []
     countloop = int(0)
     path = os.path.join("C:\\Users\\asha1\\WebScrape")
-    dst = os.path.join("C:\\Users\\asha1\\Previous\\" + str(myy_dictionary[str(x.month)]) + " " + str(x.day) + " " + str(x.year))
 
     for r, d, f in os.walk(path):
         for file in f:
@@ -475,22 +481,22 @@ def preprocess_data(doc_set):
         texts.append(stemmed_tokens)
     return texts
 
-def negative_words():
+def words(filepath):
     punctuations = '!()-[]{};:"\,<>./?@#$%^&*_~'
     tokenizer = RegexpTokenizer(r'\w+')
     en_stop = set(stopwords.words('english'))
     en_punctuation = set(string.punctuation)
     p_stemmer = PorterStemmer()
     texts = []
-    negative_word_list = []
+    word_list = []
     try:
-        with open("negative_words.txt", "r", encoding='utf8', errors='ignore') as fin:
+        with open(filepath, "r", encoding='utf8', errors='ignore') as fin:
             for line in fin.readlines():
                 line = line.replace("\n", " ")
-                negative_word_list.append(line)
+                word_list.append(line)
     except Exception as e:
         print(e)
-    for i in negative_word_list:
+    for i in word_list:
         # clean and tokenize document string
         raw = i.lower()
         for x in raw:
@@ -508,24 +514,32 @@ def negative_words():
             print(text_indiv + "TEXT_INDIVIDUAL")
     return texts
 
-def negative_word_list_compare(negative_word_list, doc_clean):
-    doc_clean_neg = []
+def word_list_compare(word_list, doc_clean):
+    doc_clean_emotion = []
     print("does it work")
     for i in doc_clean:
         print(i)
         for x in i:
             print(x)
-            for neg_array in negative_word_list:
-                for neg_word in neg_array:
-                    if x == neg_word:
-                        doc_clean_neg.append(x)
-    return doc_clean_neg
+            for array in word_list:
+                for word in array:
+                    if x == word:
+                        doc_clean_emotion.append(x)
+    return doc_clean_emotion
 
-def negative_word_common(doc_clean_neg):
-    Common = Counter(doc_clean_neg).most_common(30)
-    df = pd.DataFrame(Common, columns = ["Most common negative words", "Number of Occurences of Words"])
-    df.to_csv("C:\\Users\\asha1\\Webscrape\\negativewords.csv", index=False)
+def word_common(doc_clean_emotion, save_file_as):
+    Common = Counter(doc_clean_emotion).most_common(30)
+    df = pd.DataFrame(Common, columns = ["Most common words", "Number of Occurences of Words"])
+    df.to_csv("C:\\Users\\asha1\\WebScrape\\" + save_file_as, index=False)
 
+# Creates a csv file with all the emotional words(happy or sad) in it
+def emotional_words(filepath_emotion,  doc_clean, save_file_as):
+    #Obtains all the words from the emotinal txt file
+    word_txt = words(filepath_emotion)
+    # Compares the words obtained through webscraping and the emotiona txt file
+    common_list = word_list_compare(word_txt, doc_clean)
+    # puts the most common words into a dataframe that's exported to a csv file
+    word_common(common_list, save_file_as)
 
 # Creates matrix of how often words occur and dictionary of all the words that exist
 def prepare_corpus(doc_clean):
@@ -924,7 +938,7 @@ def go_to_next_page():
     browser.get(next_.get_attribute('href'))
     page[0] = page[0] + 1
 
-
+# If there reviews present, it will return that there are no reviews
 def no_reviews():
     return False
 
@@ -968,6 +982,7 @@ def get_browser():
     browser = wd.Chrome(options=chrome_options)
     return browser
 
+# Used to see if current page exists
 def get_current_page():
     paging_control = browser.find_element_by_class_name('pagingControls')
     current = int(paging_control.find_element_by_xpath(
@@ -1030,59 +1045,41 @@ def web_scrape_glassdoor():
         print(len(res))
 
     res.to_csv('C:\\Users\\asha1\\WebScrape\\glassdoor'  + '.csv', index=False, encoding='utf-8')
-# Addding a comment for testing purposes
+
 # Performs latent semantic analysis for scraped pages for indeed website
 def LSA_indeed():
-    print("hi")
     number_of_topics = 4
     words = 8
     text_info, title_info = load_data('C:\\Users\\asha1\\WebScrape', 'indeed' + '.csv')
-    print(text_info)
     clean_text = preprocess_data(text_info)
-    print(clean_text)
     prep_dict, prep_matrix = prepare_corpus(clean_text)
-    print(prep_dict)
-    print("1")
-    print(prep_matrix)
     new_model = create_gensim_lsa_model(clean_text, 5, 10)
-    print(new_model)
     new_list, num_topics = compute_coherence_values(prep_dict, prep_matrix, clean_text, 2, 10, 1)
-    print(new_list)
-    print("In between")
     # plot_graph(clean_text, 2, 10, 1)
     # most_common_indeed()
     common = most_common_indeed_text(clean_text)
-    print(common)
     most_common_wordcloud_indeed(clean_text)
-    print("LSA model")
-    print(new_model.print_topics(num_topics=number_of_topics, num_words=words))
     LSA_indeed_model_to_csv(new_model.print_topics(num_topics=number_of_topics, num_words=words))
     LDA_model_indeed(prep_dict, prep_matrix, clean_text)
+    emotional_words("negative_words.txt", clean_text, "negativewordsindeed.csv")
+    emotional_words("positive_words.txt", clean_text, "positivewordsindeed.csv")
 
 # Performs latent semantic analysis for scraped pages on glassdoor
-#  Test
 def LSA_glassdoor():
     number_of_topics = 5
     words = 10
     csv_convert('C:\\Users\\asha1\\WebScrape\\', 'glassdoor' + '.csv')
     text_info, title_info = load_data_glassdoor('C:\\Users\\asha1\\WebScrape', 'glassdoortext' + '.csv')
-    print(text_info)
     clean_text = preprocess_data(text_info)
-    print(clean_text)
     prep_dict, prep_matrix = prepare_corpus(clean_text)
-    print(prep_dict)
-    print("1")
-    print(prep_matrix)
     new_model = create_gensim_lsa_model(clean_text, 5, 10)
-    print(new_model)
     new_list, num_topics = compute_coherence_values(prep_dict, prep_matrix, clean_text, 5, 10, 1)
-    print(new_list)
-    print(new_model)
     most_common_wordcloud_glassdoor(clean_text)
     LSA_glassdoor_model_to_csv(new_model.print_topics(num_topics=number_of_topics, num_words=words))
     common = most_common_glassdoor_text(clean_text)
-    print(common)
     LDA_model_glassdoor(prep_dict, prep_matrix, clean_text)
+    emotional_words("negative_words.txt", clean_text, "negativewordsglassdoor.csv")
+    emotional_words("positive_words.txt", clean_text, "positivewordsglassdoor.csv")
 
     # plot_graph(clean_text, 2, 10, 1)
 
@@ -1090,8 +1087,7 @@ def LSA_glassdoor():
 # Runs the program
 def run_the_program():
     # Brings old files to old directory and allows space for new files to exist in current directoryis
-    make_directory()
-    # #
+    dirmove = make_directory()
     # # Webscrapes indeed and glassdoor respectively and saves dataframe to csv file
     web_scrape_indeed()
     time.sleep(3)
@@ -1103,8 +1099,9 @@ def run_the_program():
 
     # # Emails the files to Recruitment
     email_attachments()
-    old_file_move()
+    # Moves the files to the storage directory
+    old_file_move(dirmove)
 
-#Starts the program
-# if __name__ == '__main__':
-#     run_the_program()
+# #Starts the program
+if __name__ == '__main__':
+    run_the_program()
