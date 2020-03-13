@@ -268,8 +268,8 @@ def web_scrape_indeed():
     # print(test_df.head(10))
 
     # test_df.loc[:, 'Stars'] = test_df['Stars'].str[0:3]
-
-    export_csv = test_df.to_csv('C:\\Users\\asha1\\WebScrape\\indeed.csv')
+    return test_df
+    # export_csv = test_df.to_csv('C:\\Users\\asha1\\WebScrape\\indeed.csv')
 
 
 # Emails to HRC using VBA Script in Excel Document
@@ -349,10 +349,9 @@ def most_common_indeed():
 # Outputs the most common words from indeed scraping
 def most_common_text(texts, save_file_as, website, mode_type):
     Common = Counter(chain.from_iterable(texts)).most_common(60)
-    df = pd.DataFrame(Common, columns=['Common Words in Indeed','Number of Occurences'])
+    df = pd.DataFrame(Common, columns=['Word','Count #'])
     with pd.ExcelWriter(save_file_as, engine="openpyxl", mode=str(mode_type)) as writer:
-        df.to_excel(writer, sheet_name="Common Words" + str(website))
-    df.to_csv('C:\\Users\\asha1\\WebScrape\\indeedcommonwords'  +  '.csv')
+        df.to_excel(writer, sheet_name="Common Words " + str(website))
 
 # Common_positive = Counter(doc_clean_positive).most_common(30)
 #     Common_negative = Counter(doc_clean_negative).most_common(30)
@@ -543,8 +542,8 @@ def word_common(doc_clean_positive, doc_clean_negative, save_file_as, mode_type,
     df_neg = pd.DataFrame(Common_negative, columns = ["Word", "Count #"])
     # df.to_csv("C:\\Users\\asha1\\WebScrape\\" + save_file_as, index=False)
     with pd.ExcelWriter(save_file_as, engine="openpyxl", mode=str(mode_type)) as writer:
-        df_pos.to_excel(writer, sheet_name="Positive" + str(website))
-        df_neg.to_excel(writer, sheet_name="Negative" + str(website))
+        df_pos.to_excel(writer, sheet_name="Positive " + str(website))
+        df_neg.to_excel(writer, sheet_name="Negative " + str(website))
 
 
 # Creates a csv file with all the emotional words(happy or sad) in it
@@ -605,21 +604,19 @@ def compute_coherence_values(dictionary, doc_term_matrix, doc_clean,  stop, star
     return model_list, coherence_values
 
 # Creates csv file with information on the topic modelling words and coherence scores for indeed
-def LSA_indeed_model_to_csv(model_list):
-    # df = pd.DataFrame(data={"Topic Modelling Indeed":[model_list]})
-    # df.to_csv("C:\\Users\\asha1\\Webscrape\\TopicModelindeed"  +  ".csv", sep=" ", index=False)
-    df = pd.DataFrame.from_records(model_list)
-    df.columns = ["Topic Modelling Indeed", "col 2"]
-    df.applymap(str)
-    df['Topic Modelling Indeed'] = df['Topic Modelling Indeed'].astype(str)
-    # df['Topic Modelling Indeed'].apply(str)
-    # Removes coherence scores from the dataframe
-    print(df.dtypes)
-    df['Topic Modelling Indeed'] = df['Topic Modelling Indeed'].str.replace('\d+', ' ')
-    df['col 2'] = df['col 2'].str.replace('\d+', ' ')
-    df['col 2'] = df['col 2'].str.replace(r'[^\w\s]+', '')
-    # df.transpose()
-    df.to_csv("C:\\Users\\asha1\\Webscrape\\TopicModelindeed"  +  ".csv", sep=" ", index=False)
+def LSA_model(model_list, save_file_as, website, mode_type):
+    df = pd.DataFrame(model_list, columns=["Topic Modelling " + str(website), "Topic Words"])
+    with pd.ExcelWriter(save_file_as, engine="openpyxl", mode=str(mode_type)) as writer:
+        df.applymap(str)
+        df['Topic Modelling ' + str(website)] = df['Topic Modelling ' + str(website)].astype(str)
+        # # df['Topic Modelling Indeed'].apply(str)
+        df['Topic Modelling ' + str(website)]= df['Topic Modelling ' + str(website)].str.replace('\d+', ' ')
+        df['Topic Words'] = df['Topic Words'].str.replace('\d+', ' ')
+        df['Topic Words'] = df['Topic Words'].str.replace(r'[^\w\s]+', '')
+        df.drop(columns=['Topic Modelling ' + str(website)], axis = 1)
+        df = df[['Topic Words']]
+        df.to_excel(writer, sheet_name="LSA Model" + str(website))
+
 
 # Creates csv file with information on the topic modelling words and coherence scores for indeed
 def LSA_glassdoor_model_to_csv(model_list):
@@ -678,7 +675,7 @@ def LDA_model_indeed(dictionaryy, doc_term_matrixx, doc_clean):
     # print('\nCoherence Score: ', coherence_ldamallet)
 
 # Creates LDA model specifically for glassdoor
-def LDA_model_glassdoor(dictionaryy, doc_term_matrixx, doc_clean):
+def LDA_model(dictionaryy, doc_term_matrixx, doc_clean, save_file_as, mode_type, website):
     # Generates the lda model
     lda_model = gensim.models.ldamodel.LdaModel(corpus=doc_term_matrixx,
                                                 id2word=dictionaryy, per_word_topics=True, num_topics = 5)
@@ -690,36 +687,25 @@ def LDA_model_glassdoor(dictionaryy, doc_term_matrixx, doc_clean):
                                                 # passes=10,
                                                 # alpha='auto',
                                                 # per_word_topics=True)
-    pprint(lda_model.print_topics())
+    # pprint(lda_model.print_topics())
     doc_lda = lda_model[doc_term_matrixx]
     coherence_model_lda = CoherenceModel(model=lda_model, texts=doc_clean, dictionary=dictionaryy, coherence='c_v')
     coherence_lda = coherence_model_lda.get_coherence()
-    print('Coherence Score:', coherence_lda)
-    df = pd.DataFrame(lda_model.print_topics())
-    # df.columns = ["Topic Modelling Indeed", " "]
-    # df['Coherence Score'] = df['Coherence Score'].str.replace('\dt+', '')
-    # df['Topic Words'] = df['Topic Words'].replace('\d+', '')
-    df.columns = ["Topic Nummber", "Topic Words"]
-    df.applymap(str)
-    # Converts the entire dataframe to an object so it can be interpreted as a string
-    df['Topic Words'] = df['Topic Words'].astype(str)
-    # Gets rid of all the numbers within the string
-    df['Topic Words'] = df['Topic Words'].str.replace('\d+', '')
-    # Gets rid of all the punctuation within the dataframe (easier for user to read)
-    df['Topic Words'] = df['Topic Words'].str.replace(r'[^\w\s]+', '')
-    # Prints first 10 topics generated by the model
-    print(df.head(10))
-    # Makes the dataframe go to a csv file
-    df.to_csv("C:\\Users\\asha1\\Webscrape\\coherencescoresglassdoor" + ".csv", sep=" ", index=False)
-    # mallet_path = 'C:\\Users\\asha1\\AppData\\Local\\Temp\\mallet-2.0.8.zip'  # update this path
-    # ldamallet = gensim.models.wrappers.LdaMallet(mallet_path, corpus=doc_term_matrixx, num_topics=20, id2word=dictionaryy)
-    #
-    # pprint(ldamallet.show_topics(formatted=False))
-    #
-    # coherence_model_ldamallet = CoherenceModel(model=ldamallet, texts=doc_clean, dictionary=dictionaryy,
-    #                                            coherence='c_v')
-    # coherence_ldamallet = coherence_model_ldamallet.get_coherence()
-    # print('\nCoherence Score: ', coherence_ldamallet)
+    # print('Coherence Score:', coherence_lda)
+    df = pd.DataFrame(lda_model.print_topics(), columns=["#", "Topic Words"])
+    with pd.ExcelWriter(save_file_as, engine="openpyxl", mode=mode_type) as writer:
+        df.applymap(str)
+        df['Topic Words'] = df['Topic Words'].astype(str)
+        # Gets rid of all the numbers within the string
+        df['Topic Words'] = df['Topic Words'].str.replace('\d+', '')
+        # Gets rid of all the punctuation within the dataframe (easier for user to read)
+        df['Topic Words'] = df['Topic Words'].str.replace(r'[^\w\s]+', '')
+        df.drop(columns=["#"])
+        df = df[['Topic Words']]
+        # Writes the file to excel
+        df.to_excel(writer, sheet_name = "LDA" + str(website))
+
+
 
 # Plots graph of coherence scores and recommends how many topics to use for
 # Should not be used as helper function to determine amount of topics that should be used
@@ -1025,6 +1011,10 @@ page = [1]
 idx = [0]
 date_limit_reached = [False]
 
+def review_to_excel(df, save_as_file, website, mode_type):
+    with pd.ExcelWriter(indeed_df, save_as_file, engine="openpyxl", mode=str(mode_type)) as writer:
+        df.ExcelFile(writer, sheetname= "Reviews" + str(website))
+
 # Calls functions to webscrape glassdoor
 def web_scrape_glassdoor():
     res = pd.DataFrame([], columns=SCHEMA)
@@ -1059,7 +1049,8 @@ def web_scrape_glassdoor():
         res = res.append(reviews_df)
         print(len(res))
 
-    res.to_csv('C:\\Users\\asha1\\WebScrape\\glassdoor'  + '.csv', index=False, encoding='utf-8')
+    return res
+    # res.to_csv('C:\\Users\\asha1\\WebScrape\\glassdoor'  + '.csv', index=False, encoding='utf-8')
 
 # Performs latent semantic analysis for scraped pages for indeed website
 def LSA_indeed():
@@ -1073,9 +1064,7 @@ def LSA_indeed():
     # plot_graph(clean_text, 2, 10, 1)
     # most_common_indeed()
     most_common_wordcloud_indeed(clean_text)
-    LSA_indeed_model_to_csv(new_model.print_topics(num_topics=number_of_topics, num_words=words))
-    LDA_model_indeed(prep_dict, prep_matrix, clean_text)
-    return clean_text
+    return clean_text, new_model, prep_dict, prep_matrix
 
 # Performs latent semantic analysis for scraped pages on glassdoor
 def LSA_glassdoor():
@@ -1088,35 +1077,43 @@ def LSA_glassdoor():
     new_model = create_gensim_lsa_model(clean_text, 5, 10)
     new_list, num_topics = compute_coherence_values(prep_dict, prep_matrix, clean_text, 5, 10, 1)
     most_common_wordcloud_glassdoor(clean_text)
-    LSA_glassdoor_model_to_csv(new_model.print_topics(num_topics=number_of_topics, num_words=words))
-    LDA_model_glassdoor(prep_dict, prep_matrix, clean_text)
-    return clean_text
+    return clean_text, new_model, prep_dict, prep_matrix
     # plot_graph(clean_text, 2, 10, 1)
 
 # Runs the program
 def run_the_program():
+    number_of_topics = 5
+    words = 10
     # Brings old files to old directory and allows space for new files to exist in current directoryis
     # dirmove = make_directory()
     # # Webscrapes indeed and glassdoor respectively and saves dataframe to csv file
-    # web_scrape_indeed()
-    # time.sleep(3)
-    # web_scrape_glassdoor()
-    #
+    df_indeed = web_scrape_indeed()
+    time.sleep(3)
+    df_glassdoor = web_scrape_glassdoor()
+
+    review_to_excel(df_indeed, "C:\\Users\\asha1\\Webscrape\\reviews.xlsx", "indeed", "w")
+    review_to_excel(df_glassdoor, "C:\\Users\\asha1\\WebScrape\\reviews.xlsx", "glassdoor", "a")
     # # Runs the latent semantic analysis
-    clean_text_indeed = LSA_indeed()
-    clean_text_glassdoor = LSA_glassdoor()
+    # clean_text_indeed, indeed_model, indeed_dict, indeed_matrix = LSA_indeed()
+    # clean_text_glassdoor, glassdoor_model, glassdoor_dict, glassdoor_matrix = LSA_glassdoor()
 
-    common_indeed =  most_common_text(clean_text_indeed, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "indeed", "w")
-    common_glassdoor = most_common_text(clean_text_glassdoor, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "glassdoor", "a")
+    # Does the latent semantic analysis of topics on the words
+    # LSA_model(indeed_model.print_topics(num_words=words), "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "indeed", "w")
+    # LDA_model(indeed_dict, indeed_matrix, clean_text_indeed, "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "a", "indeed")
+    # LSA_model(glassdoor_model.print_topics(num_words=words), "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "glassdoor", "a")
+    # LDA_model(glassdoor_dict, glassdoor_matrix, clean_text_glassdoor, "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "a", "glassdoor")
 
-    clean_text_indeed_positive = emotional_words("positive_words.txt", clean_text_indeed)
-    clean_text_indeed_negative = emotional_words("negative_words.txt", clean_text_indeed)
-    word_common(clean_text_indeed_positive, clean_text_indeed_negative, "C:\\Users\\asha1\\WebScrape\\emotionword.xlsx", "w", "indeed")
-
-    clean_text_glassdoor_positive = emotional_words("positive_words.txt", clean_text_glassdoor)
-    clean_text_glassdoor_negative = emotional_words("negative_words.txt", clean_text_glassdoor)
-    word_common(clean_text_glassdoor_positive, clean_text_glassdoor_negative, "C:\\Users\\asha1\\WebScrape\\emotionword.xlsx","a", "glassdoor")
-
+    # # Obtains all the list of all the positive words and negative words that was scraped
+    # clean_text_indeed_positive = emotional_words("positive_words.txt", clean_text_indeed)
+    # clean_text_indeed_negative = emotional_words("negative_words.txt", clean_text_indeed)
+    # clean_text_glassdoor_positive = emotional_words("positive_words.txt", clean_text_glassdoor)
+    # clean_text_glassdoor_negative = emotional_words("negative_words.txt", clean_text_glassdoor)
+    #
+    # # Appends the list of most common words and most common positive and negative words to excel file
+    # most_common_text(clean_text_glassdoor, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "glassdoor", "w")
+    # word_common(clean_text_glassdoor_positive, clean_text_glassdoor_negative, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx","a", "glassdoor")
+    # most_common_text(clean_text_indeed, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "indeed", "a")
+    # word_common(clean_text_indeed_positive, clean_text_indeed_negative, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "a", "indeed")
 
     # # Emails the files to Recruitment
     # email_attachments()
@@ -1126,3 +1123,4 @@ def run_the_program():
 # #Starts the program
 if __name__ == '__main__':
     run_the_program()
+
