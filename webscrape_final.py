@@ -436,14 +436,20 @@ def transform_format(val):
 
 # All the functions  for the LSA analysis on the webscraped pages
 # Reads all the text from the indeed excel document
-def load_data(path, file_name):
+def load_data(path, file_name, website):
     print("load_data")
     documents_list = []
     titles = []
-    with open(os.path.join(path, file_name), "r", encoding='utf8', errors='ignore') as fin:
-        for line in fin.readlines():
-            text = line.strip()
-            documents_list.append(text)
+    # with open(os.path.join(path, file_name), "r", encoding='utf8', errors='ignore') as fin:
+    #     for line in fin.readlines():
+    #         text = line.strip()
+    #         documents_list.append(text)
+
+    pd.read_excel(open('reviews.xlsx', 'rb'),sheet_name='Reviews '+str(website))
+    for line in fin.readlines():
+        text = line.strip()
+        documents_list.append(text)
+
     print(len(documents_list))
     titles.append(text[0:min(len(text), 250)])
     return documents_list, titles
@@ -1012,8 +1018,8 @@ idx = [0]
 date_limit_reached = [False]
 
 def review_to_excel(df, save_as_file, website, mode_type):
-    with pd.ExcelWriter(indeed_df, save_as_file, engine="openpyxl", mode=str(mode_type)) as writer:
-        df.ExcelFile(writer, sheetname= "Reviews" + str(website))
+    with pd.ExcelWriter(save_as_file, engine="openpyxl", mode=str(mode_type)) as writer:
+        df.to_excel(writer, sheet_name= "Reviews " + str(website))
 
 # Calls functions to webscrape glassdoor
 def web_scrape_glassdoor():
@@ -1056,7 +1062,7 @@ def web_scrape_glassdoor():
 def LSA_indeed():
     number_of_topics = 4
     words = 8
-    text_info, title_info = load_data('C:\\Users\\asha1\\WebScrape', 'indeed' + '.csv')
+    text_info, title_info = load_data('C:\\Users\\asha1\\WebScrape', 'indeed' + '.csv', "indeed")
     clean_text = preprocess_data(text_info)
     prep_dict, prep_matrix = prepare_corpus(clean_text)
     new_model = create_gensim_lsa_model(clean_text, 5, 10)
@@ -1071,7 +1077,7 @@ def LSA_glassdoor():
     number_of_topics = 5
     words = 10
     csv_convert('C:\\Users\\asha1\\WebScrape\\', 'glassdoor' + '.csv')
-    text_info, title_info = load_data_glassdoor('C:\\Users\\asha1\\WebScrape', 'glassdoortext' + '.csv')
+    text_info, title_info = load_data_glassdoor('C:\\Users\\asha1\\WebScrape', 'glassdoortext' + '.csv', "glassdoor")
     clean_text = preprocess_data(text_info)
     prep_dict, prep_matrix = prepare_corpus(clean_text)
     new_model = create_gensim_lsa_model(clean_text, 5, 10)
@@ -1082,43 +1088,46 @@ def LSA_glassdoor():
 
 # Runs the program
 def run_the_program():
+    # Variables declared for the topic modelling
     number_of_topics = 5
     words = 10
     # Brings old files to old directory and allows space for new files to exist in current directoryis
-    # dirmove = make_directory()
-    # # Webscrapes indeed and glassdoor respectively and saves dataframe to csv file
+    dirmove = make_directory()
+    # # Webscrapes indeed and glassdoor respectively
     df_indeed = web_scrape_indeed()
     time.sleep(3)
     df_glassdoor = web_scrape_glassdoor()
 
+    # Saves the dataframe to a common file
     review_to_excel(df_indeed, "C:\\Users\\asha1\\Webscrape\\reviews.xlsx", "indeed", "w")
     review_to_excel(df_glassdoor, "C:\\Users\\asha1\\WebScrape\\reviews.xlsx", "glassdoor", "a")
+
     # # Runs the latent semantic analysis
-    # clean_text_indeed, indeed_model, indeed_dict, indeed_matrix = LSA_indeed()
-    # clean_text_glassdoor, glassdoor_model, glassdoor_dict, glassdoor_matrix = LSA_glassdoor()
+    clean_text_indeed, indeed_model, indeed_dict, indeed_matrix = LSA_indeed()
+    clean_text_glassdoor, glassdoor_model, glassdoor_dict, glassdoor_matrix = LSA_glassdoor()
 
     # Does the latent semantic analysis of topics on the words
-    # LSA_model(indeed_model.print_topics(num_words=words), "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "indeed", "w")
-    # LDA_model(indeed_dict, indeed_matrix, clean_text_indeed, "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "a", "indeed")
-    # LSA_model(glassdoor_model.print_topics(num_words=words), "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "glassdoor", "a")
-    # LDA_model(glassdoor_dict, glassdoor_matrix, clean_text_glassdoor, "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "a", "glassdoor")
+    LSA_model(indeed_model.print_topics(num_words=words), "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "indeed", "w")
+    LDA_model(indeed_dict, indeed_matrix, clean_text_indeed, "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "a", "indeed")
+    LSA_model(glassdoor_model.print_topics(num_words=words), "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "glassdoor", "a")
+    LDA_model(glassdoor_dict, glassdoor_matrix, clean_text_glassdoor, "C:\\Users\\asha1\\Webscrape\\LSA.xlsx", "a", "glassdoor")
 
     # # Obtains all the list of all the positive words and negative words that was scraped
-    # clean_text_indeed_positive = emotional_words("positive_words.txt", clean_text_indeed)
-    # clean_text_indeed_negative = emotional_words("negative_words.txt", clean_text_indeed)
-    # clean_text_glassdoor_positive = emotional_words("positive_words.txt", clean_text_glassdoor)
-    # clean_text_glassdoor_negative = emotional_words("negative_words.txt", clean_text_glassdoor)
+    clean_text_indeed_positive = emotional_words("positive_words.txt", clean_text_indeed)
+    clean_text_indeed_negative = emotional_words("negative_words.txt", clean_text_indeed)
+    clean_text_glassdoor_positive = emotional_words("positive_words.txt", clean_text_glassdoor)
+    clean_text_glassdoor_negative = emotional_words("negative_words.txt", clean_text_glassdoor)
     #
     # # Appends the list of most common words and most common positive and negative words to excel file
-    # most_common_text(clean_text_glassdoor, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "glassdoor", "w")
-    # word_common(clean_text_glassdoor_positive, clean_text_glassdoor_negative, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx","a", "glassdoor")
-    # most_common_text(clean_text_indeed, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "indeed", "a")
-    # word_common(clean_text_indeed_positive, clean_text_indeed_negative, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "a", "indeed")
+    most_common_text(clean_text_glassdoor, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "glassdoor", "w")
+    word_common(clean_text_glassdoor_positive, clean_text_glassdoor_negative, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx","a", "glassdoor")
+    most_common_text(clean_text_indeed, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "indeed", "a")
+    word_common(clean_text_indeed_positive, clean_text_indeed_negative, "C:\\Users\\asha1\\WebScrape\\commonwords.xlsx", "a", "indeed")
 
-    # # Emails the files to Recruitment
-    # email_attachments()
+    # Emails the files to Recruitment
+    email_attachments()
     # Moves the files to the storage directory
-    # old_file_move(dirmove)
+    old_file_move(dirmove)
 
 # #Starts the program
 if __name__ == '__main__':
