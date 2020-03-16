@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import argparse
 from bs4 import BeautifulSoup
+import calendar
 from collections import Counter
 import csv
 import datetime as dt
@@ -95,7 +96,7 @@ parser.add_argument('--headless', action='store_true',
 parser.add_argument('--username', help='Email address used to sign in to GD.')
 parser.add_argument('-p', '--password', help='Password to sign in to GD.')
 parser.add_argument('-c', '--credentials', help='Credentials file')
-parser.add_argument('-l', '--limit', default=15,
+parser.add_argument('-l', '--limit', default=152,
                         action='store', type=int, help='Max reviews to scrape')
 parser.add_argument('--start_from_url', action='store_true',
                         help='Start scraping from the passed URL.')
@@ -167,6 +168,21 @@ myy_dictionary = {
     "12": 'December'
 }
 
+calendar_dictionary = {
+    "01": 'January',
+    "02": 'February',
+    "03": 'March',
+    "04": 'April',
+    "05": 'May',
+    "06": 'June',
+    "07": 'July',
+    "08": 'August',
+    "09": 'September',
+    "10": 'October',
+    "11": 'November',
+    "12": 'December'
+}
+
 def make_directory():
     # # dir = os.path.join("C:\\Users\\asha1\\WebScrape\\" + str(myy_dictionary[str(x.month)]) + " " + str(x.day) + " " + str(x.year))
     # # if not os.path.exists(dir):
@@ -191,7 +207,8 @@ def old_file_move(dst):
 
     for r, d, f in os.walk(path):
         for file in f:
-            if 'glassdoor' in file or 'indeed' in file or "coherence" in file:
+            if 'glassdoor' in file or 'indeed' in file or "coherence" or "commonwords" in file or "LSA" in file\
+                    or "reviews" in file:
                 files.append(file)
                 filespath.append(r)
 
@@ -268,8 +285,9 @@ def web_scrape_indeed():
     # print(test_df.head(10))
 
     # test_df.loc[:, 'Stars'] = test_df['Stars'].str[0:3]
+    export_csv = test_df.to_csv('C:\\Users\\asha1\\WebScrape\\indeed.csv')
     return test_df
-    # export_csv = test_df.to_csv('C:\\Users\\asha1\\WebScrape\\indeed.csv')
+
 
 
 # Emails to HRC using VBA Script in Excel Document
@@ -440,15 +458,15 @@ def load_data(path, file_name, website):
     print("load_data")
     documents_list = []
     titles = []
-    # with open(os.path.join(path, file_name), "r", encoding='utf8', errors='ignore') as fin:
-    #     for line in fin.readlines():
-    #         text = line.strip()
-    #         documents_list.append(text)
+    with open(os.path.join(path, file_name), "r", encoding='utf8', errors='ignore') as fin:
+        for line in fin.readlines():
+            text = line.strip()
+            documents_list.append(text)
 
-    pd.read_excel(open('reviews.xlsx', 'rb'),sheet_name='Reviews '+str(website))
-    for line in fin.readlines():
-        text = line.strip()
-        documents_list.append(text)
+    # pd.read_excel(open('reviews.xlsx', 'rb'),sheet_name='Reviews '+str(website))
+    # for line in fin.readlines():
+    #     text = line.strip()
+    #     documents_list.append(text)
 
     print(len(documents_list))
     titles.append(text[0:min(len(text), 250)])
@@ -550,6 +568,32 @@ def word_common(doc_clean_positive, doc_clean_negative, save_file_as, mode_type,
     with pd.ExcelWriter(save_file_as, engine="openpyxl", mode=str(mode_type)) as writer:
         df_pos.to_excel(writer, sheet_name="Positive " + str(website))
         df_neg.to_excel(writer, sheet_name="Negative " + str(website))
+
+def word_common_compare(save_file_as, mode_type, website):
+    if x.day <= 7:
+        c = calendar.TextCalendar(calendar.SUNDAY)
+        for i in c.itermonthdays(2020, (x.month + 11) % 12):
+            if i != 0:
+                countmax += 1
+        Last_Monday = x - datetime.timedelta(days=16)
+        Day = countmax - (7 - x.day)
+        Month = Last_Monday.strftime("%m")
+        Year - Last_Monday.strftime("%Y")
+    else:
+        Day = x.day - 7
+        Month = x.month
+        Year = x.year
+    # df1 = pd.read_excel(file_old)
+    # df2 = pd.read_excel(file_new)
+    old_date_string = + str(calendar_dictionary[str(Month)]) + " " + str(Day) + " " +  str(Year) + "\\"
+    df1 = pd.read_excel("C:\\Users\\asha1\\Webscrape\\ " + str(old_date_string) + str("commonwords.xlsx"))
+    df2 = pd.read_excel("C:\\Users\\asha1\\Webscrape\\commonwords.xlsx")
+
+    difference = df1[df1!=df2]
+    print(difference)
+    with pd.ExcelWriter(save_file_as, engine="openpyxl", mode=str(mode_type)) as writer:
+        difference.to_excel(writer, sheet_name="Compare " + str(website))
+    return difference
 
 
 # Creates a csv file with all the emotional words(happy or sad) in it
@@ -1020,6 +1064,13 @@ date_limit_reached = [False]
 def review_to_excel(df, save_as_file, website, mode_type):
     with pd.ExcelWriter(save_as_file, engine="openpyxl", mode=str(mode_type)) as writer:
         df.to_excel(writer, sheet_name= "Reviews " + str(website))
+        for idx, col in enumerate(df):  # loop through all columns
+            series = df[col]
+            max_len = max((
+                series.astype(str).map(len).max(),  # len of largest item
+                len(str(series.name))  # len of column name/header
+            )) + 1  # adding a little extra space
+            worksheet.set_column(idx, idx, max_len)
 
 # Calls functions to webscrape glassdoor
 def web_scrape_glassdoor():
@@ -1054,7 +1105,7 @@ def web_scrape_glassdoor():
         reviews_df = extract_from_page()
         res = res.append(reviews_df)
         print(len(res))
-
+    res.to_csv('C:\\Users\\asha1\\WebScrape\\glassdoor'  + '.csv', index=False, encoding='utf-8')
     return res
     # res.to_csv('C:\\Users\\asha1\\WebScrape\\glassdoor'  + '.csv', index=False, encoding='utf-8')
 
@@ -1077,7 +1128,7 @@ def LSA_glassdoor():
     number_of_topics = 5
     words = 10
     csv_convert('C:\\Users\\asha1\\WebScrape\\', 'glassdoor' + '.csv')
-    text_info, title_info = load_data_glassdoor('C:\\Users\\asha1\\WebScrape', 'glassdoortext' + '.csv', "glassdoor")
+    text_info, title_info = load_data_glassdoor('C:\\Users\\asha1\\WebScrape', 'glassdoortext' + '.csv')
     clean_text = preprocess_data(text_info)
     prep_dict, prep_matrix = prepare_corpus(clean_text)
     new_model = create_gensim_lsa_model(clean_text, 5, 10)
@@ -1131,5 +1182,6 @@ def run_the_program():
 
 # #Starts the program
 if __name__ == '__main__':
-    run_the_program()
+    # run_the_program()
+    print("hi")
 
