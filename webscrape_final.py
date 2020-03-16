@@ -585,8 +585,9 @@ def word_common_compare(save_file_as, mode_type, website):
         Year = x.year
     # df1 = pd.read_excel(file_old)
     # df2 = pd.read_excel(file_new)
-    old_date_string = + str(calendar_dictionary[str(Month)]) + " " + str(Day) + " " +  str(Year) + "\\"
-    df1 = pd.read_excel("C:\\Users\\asha1\\Webscrape\\ " + str(old_date_string) + str("commonwords.xlsx"))
+    print(Month)
+    old_date_string = str(myy_dictionary[str(Month)]) + " " + str(Day) + " " +  str(Year) + "\\"
+    df1 = pd.read_excel("C:\\Users\\asha1\\Previous\\" + str(old_date_string) + str("commonwords.xlsx"))
     df2 = pd.read_excel("C:\\Users\\asha1\\Webscrape\\commonwords.xlsx")
 
     difference = df1[df1!=df2]
